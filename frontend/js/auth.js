@@ -31,12 +31,15 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const role = registerForm.role.value;
             const name = registerForm.name.value;
+            const department = registerForm.department.value;
+            const branch = registerForm.branch.value;
+            const semester = registerForm.semester.value;
             const username = registerForm.username.value;
             const password = registerForm.password.value;
             const errorMsg = document.getElementById('errorMsg');
             const successMsg = document.getElementById('successMsg');
 
-            const result = db.registerUser(name, username, password, role);
+            const result = db.registerUser(name, username, password, role, department, branch, semester);
 
             if (result.success) {
                 errorMsg.style.display = 'none';
