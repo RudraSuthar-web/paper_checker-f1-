@@ -65,7 +65,7 @@ class DataStore {
         return { success: false, message: 'Invalid credentials or role.' };
     }
 
-    registerUser(name, username, password, role) {
+    registerUser(name, username, password, role, department, branch, semester) {
         const users = this.getUsers();
         if (users.find(u => u.username === username)) {
             return { success: false, message: 'Username already exists.' };
@@ -76,7 +76,10 @@ class DataStore {
             name,
             username,
             password,
-            role
+            role,
+            department,
+            branch,
+            semester
         };
 
         users.push(newUser);

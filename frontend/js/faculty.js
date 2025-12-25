@@ -35,7 +35,6 @@ function renderDashboard() {
 
     // Update Stats
     document.getElementById('totalAssignments').textContent = assignments.length;
-    document.getElementById('totalSubmissions').textContent = submissions.length;
 
     // Render Recent Assignments
     const listContainer = document.getElementById('recentAssignments');
@@ -47,6 +46,7 @@ function renderDashboard() {
     }
 
     assignments.slice(0, 5).forEach(asg => {
+        const subCount = submissions.filter(s => s.assignmentId === asg.id).length;
         const item = document.createElement('div');
         item.className = 'assignment-item';
         item.innerHTML = `
@@ -60,7 +60,9 @@ function renderDashboard() {
             </div>
             <div style="display: flex; gap: 1rem; align-items: center;">
                  <span class="badge badge-blue">Active</span>
-                 <button class="btn btn-secondary btn-sm" onclick="viewSubmissions('${asg.id}', '${asg.title.replace(/'/g, "\\'")}')">View Submissions</button>
+                 <button class="btn btn-secondary btn-sm" onclick="viewSubmissions('${asg.id}', '${asg.title.replace(/'/g, "\\'")}')">
+                    View Submissions (${subCount})
+                 </button>
             </div>
         `;
         listContainer.appendChild(item);
@@ -173,6 +175,7 @@ function setupCreateAssignment() {
         e.preventDefault();
 
         const title = document.getElementById('asgTitle').value;
+        const subject = document.getElementById('asgSubject').value;
         const description = document.getElementById('asgDesc').value;
         const deadline = document.getElementById('asgDeadline').value;
 
@@ -200,6 +203,7 @@ function setupCreateAssignment() {
 
         const newAssignment = {
             title,
+            subject, // Save Subject
             description,
             deadline,
             pdfFile, // Store filename (mock upload)
