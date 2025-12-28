@@ -1,0 +1,14 @@
+{
+    "rehman123": {
+        "password": "scrypt:32768:8:1$zTODS7SWo4YPiHCk$e5cad048d7fe3937b19978ad6dc627e428e67d11566f26065452d353d6ab7412fc7cf1328a6d6435790d3e4155c8144edf7a57d2a6eb278b846fa2f007f9fc43",
+        "role": "faculty"
+    },
+    "peter123": {
+        "password": "scrypt:32768:8:1$pxCeBBMQGSNtcIHQ$4897c57965975029a5cedb14ad76c42c12fa9dd96b19375a92028adf4bcacaa92a74631ace5a2be273a30f78d58f7118d74cb3a712e8ef1a3ac00fe36f6e8dda",
+        "role": "faculty"
+    },
+    "student1": {
+        "password": "scrypt:32768:8:1$LBbRRcpyyWr0X5FQ$c076a025413d3d2bc48464d3d23e8d9335322284e096c1eb2785f9c107b7a6e7a6b2d89cdc1d20703135f1d6c597a501ed0507a89d93ce3585a2a6e6688a891a",
+        "role": "student"
+    }
+}

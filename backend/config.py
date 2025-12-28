@@ -2,10 +2,10 @@ import os
 from google import genai
 
 # Setup API Key (Best practice: use environment variables, but this works for now)
-API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyBTU3pGP5LYnoHJfRoq6Q3yYAOaMWULOsU")
+API_KEY = os.getenv("GEMINI_API_KEY")#after "GEMINI_API_KEY",
 
 # Initialize Client once here to import elsewhere
 client = genai.Client(api_key=API_KEY)
 
 # Model configuration
-MODEL_NAME = "gemini-3-flash-preview" # Upgraded to 2.0 Flash (faster/better)
+MODEL_NAME = "gemini-2.5-flash" # Upgraded to 2.0 Flash (faster/better)

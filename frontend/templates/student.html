@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - AI Grader</title>
+    <link rel="stylesheet" href="../static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1>Student Dashboard</h1>
+                <p style="margin: 0; text-align: left;">Upload your answer sheet for instant AI grading.</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <a href="#" onclick="viewResults(event)" class="btn btn-secondary" style="text-decoration: none;">
+                    <i class="fa-solid fa-chart-simple"></i>
+                    View Results
+                </a>
+                <a href="frontend/templates/index.html" onclick="logout(event)" class="logout-link">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+
+        <main>
+            <div id="uploadSection" class="card" style="text-align: center;">
+                <h2>Submit Assessment</h2>
+                <p>Please upload your answer sheet in PDF format.</p>
+
+                <div class="upload-zone" onclick="document.getElementById('s_file').click()">
+                    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                    <h3 style="color: #cbd5e1;">Click to Upload or Drag File Here</h3>
+                    <p style="font-size: 0.9rem; margin-bottom: 0;">Supports: PDF (Max 10MB)</p>
+                    <input type="file" id="s_file" name="file" accept=".pdf">
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn" style="max-width: 300px;" onclick="uploadAndGrade()">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="margin-right: 0.5rem;"></i>
+                        Grade My Paper
+                    </button>
+                </div>
+            </div>
+
+            <div id="loading" class="card hidden" style="text-align: center; padding: 4rem 2rem;">
+                <div class="spinner"></div>
+                <h2 style="color: var(--primary-light);">AI Analysis in Progress</h2>
+                <p>We are analyzing your logic, checking keywords, and calculating your score.</p>
+                <p style="font-size: 0.9rem; color: #64748b;">This may take a few seconds...</p>
+            </div>
+
+            <div id="results" class="hidden">
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function uploadAndGrade() {
+            const fileInput = document.getElementById('s_file');
+            if (fileInput.files.length === 0) return alert("Please select a file to upload.");
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('type', 'student');
+
+            document.getElementById('uploadSection').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+
+            try {
+                // Upload student file
+                const upRes = await fetch('http://127.0.0.1:5000/upload', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+
+                if (!upRes.ok) {
+                    const errorData = await upRes.json();
+                    throw new Error(errorData.error || "Upload failed. Please try again.");
+                }
+
+                // Trigger grading with retry logic for long-running requests
+                let retries = 0;
+                const maxRetries = 5;
+                let report = null;
+
+                while (retries < maxRetries) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout per attempt
+
+                        const gradeRes = await fetch('http://127.0.0.1:5000/run_grading', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            signal: controller.signal
+                        });
+
+                        clearTimeout(timeoutId);
+
+                        if (!gradeRes.ok) {
+                            const errorData = await gradeRes.json();
+                            throw new Error(errorData.error || "Grading failed.");
+                        }
+
+                        report = await gradeRes.json();
+                        break; // Success! Exit retry loop
+
+                    } catch (fetchError) {
+                        if (fetchError.name === 'AbortError') {
+                            retries++;
+                            console.log(`Attempt ${retries} timed out, retrying...`);
+                            if (retries >= maxRetries) {
+                                throw new Error('Grading is taking longer than expected. Please try again or contact support.');
+                            }
+                            // Wait a bit before retrying
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                        } else {
+                            throw fetchError;
+                        }
+                    }
+                }
+
+                if (report) {
+                    // Redirect to results page
+                    window.location.href = window.location.port === '5500' ? 'results.html' : 'http://127.0.0.1:5000/results';
+                } else {
+                    throw new Error('Failed to get grading results after multiple attempts.');
+                }
+
+            } catch (error) {
+                console.error('Error details:', error);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('uploadSection').classList.remove('hidden');
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function viewResults(event) {
+            event.preventDefault();
+            window.location.href = window.location.port === '5500' ? 'results.html' : 'http://127.0.0.1:5000/results';
+        }
+
+        function renderReport(data) {
+            document.getElementById('loading').classList.add('hidden');
+            const resDiv = document.getElementById('results');
+            resDiv.classList.remove('hidden');
+
+            let html = `
+            <div class="card" style="text-align: center; border-color: var(--primary);">
+                <div style="font-size: 3rem; color: var(--success); margin-bottom: 1rem;">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+                <h2>Grading Complete!</h2>
+                <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin: 1rem 0;">
+                    ${data.total_score} <span style="font-size: 1rem; color: #94a3b8; font-weight: normal;">/ Total</span>
+                </div>
+                <div style="background: rgba(15, 23, 42, 0.4); padding: 1rem; border-radius: 8px; display: inline-block;">
+                    <strong>Professor's Remarks:</strong> 
+                    <span style="color: #e2e8f0;">${data.remarks}</span>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Question Breakdown</h3>
+            <div class="results-grid">`;
+
+            data.results.forEach(q => {
+                const ratio = q.marks_obtained / q.max_marks;
+                const badgeClass = ratio > 0.7 ? 'score-high' : (ratio < 0.4 ? 'score-low' : 'score-badge');
+
+                html += `
+                <div class="result-item">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <strong style="font-size: 1.1rem; color: #fff;">${q.question_id}</strong>
+                        <span class="score-badge ${badgeClass}">
+                            ${q.marks_obtained} / ${q.max_marks}
+                        </span>
+                    </div>
+                    <p class="result-feedback">
+                        <i class="fa-regular fa-comment-dots" style="margin-right: 5px;"></i>
+                        ${q.feedback}
+                    </p>
+                </div>`;
+            });
+
+            html += `</div> 
+            <div style="margin-top: 2rem; text-align: center;">
+                <button class="btn btn-secondary" onclick="location.reload()">Grade Another Paper</button>
+            </div>`;
+
+            resDiv.innerHTML = html;
+        }
+
+        async function logout(event) {
+            event.preventDefault();
+            try {
+                await fetch('http://127.0.0.1:5000/logout', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.log('Logout error:', error);
+            }
+            // Redirect to login page (use '/' for Flask or 'index.html' for Live Server)
+            window.location.href = window.location.port === '5500' ? 'index.html' : 'http://127.0.0.1:5500/frontend/templates/index.html';
+        }
+    </script>
+</body>
+
+</html>
